@@ -1,0 +1,35 @@
+install.packages("INLA", repos="https://www.math.ntnu.no/inla/R/stable")
+
+cUrl=paste("http://scrippsco2.ucsd.edu/sites/default/files","/data/flask_co2_and_isotopic/daily_co2/fldav_spo.csv",sep="")
+cFile=basename(cUrl)
+if(!file.exists(cFile))download.file(cUrl, cFile)
+
+co2s=read.table(cFile,header=FALSE,sep=",",skip=69,stringsAsFactors=FALSE)
+co2s[co2s[,6]>0,7]=NA
+co2s=data.frame(date=strptime(co2s[,1],format="%Y-%m-%d",tz="UTC"),co2=co2s[,7])
+plot(co2s$date, co2s$co2)
+
+timeOrigin=ISOdate(1980,1,1,0,0,0,tz="UTC")
+co2s$days=as.numeric(difftime(co2s$date,timeOrigin,units="days"))
+co2s$cos12=cos(2*pi*co2s$days/365.25)
+co2s$sin12=sin(2*pi*co2s$days/365.25)
+co2s$cos6=cos(2*2*pi*co2s$days/365.25)
+co2s$sin6=sin(2*2*pi*co2s$days/365.25)
+cgam=gam(co2~s(days) + cos12 + sin12 + cos6 + sin6,data=co2s)
+summary(cgam)$p.table[,1:2]
+
+newX=data.frame(date=seq(ISOdate(1990,1,1,0,0,0,tz ="UTC"),by="1 days",length.out=365*30))
+newX$days=as.numeric(difftime(newX$date, timeOrigin,units="days"))
+newX$cos12=cos(2*pi*newX$days/365.25)
+newX$sin12=sin(2*pi*newX$days/365.25)
+newX$cos6=cos(2*2*pi*newX$days/365.25)
+newX$sin6=sin(2*2*pi*newX$days/365.25)
+coPred=predict(cgam,newX,se.fit=TRUE)
+coPred=data.frame(est=coPred$fit,lower=coPred$fit-2*coPred$se.fit,upper=coPred$fit+2*coPred$se.fit)
+dev.new()
+plot(newX$date, coPred$est,type="l")
+matlines(as.numeric(newX$date), coPred[,c("lower","upper","est")],lty =1,col=c("yellow","yellow","black"))
+newX=newX[1:365, ]
+newX$days=0
+dev.new()
+plot(newX$date,predict(cgam, newX))

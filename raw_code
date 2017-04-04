@@ -17,8 +17,22 @@ co2s$cos12=cos(2*pi*co2s$days/365.25)
 co2s$sin12=sin(2*pi*co2s$days/365.25)
 co2s$cos6=cos(2*2*pi*co2s$days/365.25)
 co2s$sin6=sin(2*2*pi*co2s$days/365.25)
-cgam=gam(co2~s(days) + cos12 + sin12 + cos6 + sin6,data=co2s)
+
+# the models
+
+cgam1=gam(co2~s(days) + cos12 + sin12 + cos6 + sin6,data=co2s)
+
+cgam2=gam(co2~days + cos12 + sin12 + cos6 + sin6,data=co2s)
+
+cgam3=gam(co2~s(days) + s(cos12) + s(sin12) + s(cos6) + s(sin6),data=co2s)
+
+cgam4=gam(co2~s(days) + s(cos12) + sin12 + cos6 + sin6,data=co2s)
+
+cgam5=gam(co2~s(days) + s(cos12) + sin12,data=co2s)
+
 summary(cgam)$p.table[,1:2]
+
+# predictions
 
 newX=data.frame(date=seq(ISOdate(1990,1,1,0,0,0,tz ="UTC"),by="1 days",length.out=365*30))
 newX$days=as.numeric(difftime(newX$date, timeOrigin,units="days"))

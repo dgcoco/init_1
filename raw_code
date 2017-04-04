@@ -33,3 +33,6 @@ newX=newX[1:365, ]
 newX$days=0
 dev.new()
 plot(newX$date,predict(cgam, newX))
+
+#test
+

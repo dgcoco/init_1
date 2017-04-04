@@ -1,5 +1,7 @@
 install.packages("INLA", repos="https://www.math.ntnu.no/inla/R/stable")
 
+# CO2 in Antarctica
+
 cUrl=paste("http://scrippsco2.ucsd.edu/sites/default/files","/data/flask_co2_and_isotopic/daily_co2/fldav_spo.csv",sep="")
 cFile=basename(cUrl)
 if(!file.exists(cFile))download.file(cUrl, cFile)
@@ -34,5 +36,15 @@ newX$days=0
 dev.new()
 plot(newX$date,predict(cgam, newX))
 
-#test
+# Math: Redux
+
+
+
+# Moss: Redux
+
+
+
+# Smoking: Redux
+
+
 

@@ -25,24 +25,14 @@ co2s$sin6=sin(2*2*pi*co2s$days/365.25)
 
 cgam1=gam(co2~s(days) + cos12 + sin12 + cos6 + sin6,data=co2s)
 
-cgam2=gam(co2~days + cos12 + sin12 + cos6 + sin6,data=co2s)
-
-cgam3=gam(co2~s(days) + s(cos12) + s(sin12) + s(cos6) + s(sin6),data=co2s)
-
-cgam4=gam(co2~s(days) + s(cos12) + sin12 + cos6 + sin6,data=co2s)
-
-cgam5=gam(co2~s(days) + s(cos12) + sin12,data=co2s)
+#cgam2=gam(co2~days + cos12 + sin12 + cos6 + sin6,data=co2s)
+#cgam3=gam(co2~s(days) + s(cos12) + s(sin12) + s(cos6) + s(sin6),data=co2s)
+#cgam4=gam(co2~s(days) + s(cos12) + sin12 + cos6 + sin6,data=co2s)
+#cgam5=gam(co2~s(days) + s(cos12) + sin12,data=co2s)
 
 summary(cgam)$p.table[,1:2]
 
 # predictions
-
-newX=data.frame(date=seq(ISOdate(1970,1,1,0,0,0,tz ="UTC"),by="1 days",length.out=365*30))
-newX$days=as.numeric(difftime(newX$date, timeOrigin,units="days"))
-newX$cos12=cos(2*pi*newX$days/365.25)
-newX$sin12=sin(2*pi*newX$days/365.25)
-newX$cos6=cos(2*2*pi*newX$days/365.25)
-newX$sin6=sin(2*2*pi*newX$days/365.25)
 
 eps=1
 newX=co2s
@@ -53,39 +43,15 @@ pred2=predict(cgam1,newX,type='lpmatrix')
 pred3=predict(cgam1,newXfwd,type='lpmatrix')
 
 fd21=(pred2-pred1)/eps
-fd32=(pred2-pred3)/eps
 fd21=fd21%*%coef(cgam1)
-fd32=fd32%*%coef(cgam1)
 sdiff=(pred3+pred1-2*pred2)/(eps^2)
 sdiff=sdiff%*%coef(cgam1)
-par(mfrow=c(3,1))
-plot(newX$date,fd21)
-plot(newX$date,fd32)
+par(mfrow=c(2,1))
+plot(newX$date,fd21,main='Approximation of First Derivative',
+xlab='Year',ylab='First Difference')
+plot(newX$date,sdiff,main='Approximation of Second Derivative',
+xlab='Year',ylab='Second Difference')
 lines(newX$date,rep(0,dim(newX)[1]),col='red',lwd='2')
-plot(newX$date,sdiff)
-lines(newX$date,rep(0,dim(newX)[1]),col='red',lwd='2')
-
-#fd21=(pred2-pred1)/eps
-#fd32=(pred3-pred2)/eps
-#sd=(fd32-fd21)/eps
-#sd=sd%*%coef(cgam1)
-#dev.new()
-#plot(newX$date,sd)
-
-#og code for cgam5
-newX=data.frame(date=seq(ISOdate(1990,1,1,0,0,0,tz ="UTC"),by="1 days",length.out=365*30))
-newX$days=as.numeric(difftime(newX$date, timeOrigin,units="days"))
-newX$cos12=cos(2*pi*newX$days/365.25)
-newX$sin12=sin(2*pi*newX$days/365.25)
-coPred5=predict(cgam5,newX,se.fit=TRUE)
-coPred5=data.frame(est=coPred5$fit,lower=coPred5$fit-2*coPred5$se.fit,upper=coPred5$fit+2*coPred5$se.fit)
-dev.new()
-plot(newX$date, coPred5$est,type="l")
-matlines(as.numeric(newX$date), coPred5[,c("lower","upper","est")],lty =1,col=c("yellow","yellow","black"))
-newX=newX[1:365, ]
-newX$days=0
-dev.new()
-plot(newX$date,predict(cgam5, newX))
 
 #og code
 newX=data.frame(date=seq(ISOdate(1990,1,1,0,0,0,tz ="UTC"),by="1 days",length.out=365*30))
@@ -104,13 +70,14 @@ newX$days=0
 dev.new()
 plot(newX$date,predict(cgam1, newX))
 
-# finite difference approximation
-
-
-
 # Math: Redux
 
+data("MathAchieve", package="MEMSS")
+mathINLA=inla(MathAch~Minority+Sex+MEANSES+SES+
+f(School,model='iid'),
+data=MathAchieveNew,family='beta',verbose=TRUE)
 
+,model='iid',hyper=list(prec=list(prior='pc.prec'))
 
 # Moss: Redux
 

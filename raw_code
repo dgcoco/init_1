@@ -2,6 +2,7 @@ install.packages("INLA", repos="https://www.math.ntnu.no/inla/R/stable")
 
 library(INLA)
 library(mgcv)
+INLA:::inla.dynload.workaround() 
 
 # CO2 in Antarctica
 
@@ -25,19 +26,12 @@ co2s$sin6=sin(2*2*pi*co2s$days/365.25)
 
 cgam1=gam(co2~s(days) + cos12 + sin12 + cos6 + sin6,data=co2s)
 
-#cgam2=gam(co2~days + cos12 + sin12 + cos6 + sin6,data=co2s)
-#cgam3=gam(co2~s(days) + s(cos12) + s(sin12) + s(cos6) + s(sin6),data=co2s)
-#cgam4=gam(co2~s(days) + s(cos12) + sin12 + cos6 + sin6,data=co2s)
-#cgam5=gam(co2~s(days) + s(cos12) + sin12,data=co2s)
-
-summary(cgam)$p.table[,1:2]
-
 # predictions
 
 eps=1
 newX=co2s
-newXfwd=newX+eps
-newXbwd=newX-eps
+newXfwd=newX$days+eps
+newXbwd=newX$days-eps
 pred1=predict(cgam1,newXbwd,type='lpmatrix')
 pred2=predict(cgam1,newX,type='lpmatrix')
 pred3=predict(cgam1,newXfwd,type='lpmatrix')
@@ -46,6 +40,8 @@ fd21=(pred2-pred1)/eps
 fd21=fd21%*%coef(cgam1)
 sdiff=(pred3+pred1-2*pred2)/(eps^2)
 sdiff=sdiff%*%coef(cgam1)
+
+dev.new()
 par(mfrow=c(2,1))
 plot(newX$date,fd21,main='Approximation of First Derivative',
 xlab='Year',ylab='First Difference')
@@ -53,29 +49,128 @@ plot(newX$date,sdiff,main='Approximation of Second Derivative',
 xlab='Year',ylab='Second Difference')
 lines(newX$date,rep(0,dim(newX)[1]),col='red',lwd='2')
 
-#og code
-newX=data.frame(date=seq(ISOdate(1990,1,1,0,0,0,tz ="UTC"),by="1 days",length.out=365*30))
+# Derivatives: 1975-1995
+
+ind=seq(1,365*20)
+eps=1
+newX=data.frame(date=seq(ISOdate(1975,1,1,0,0,0,tz ="UTC"),by="1 days",length.out=365*20))
 newX$days=as.numeric(difftime(newX$date, timeOrigin,units="days"))
+newXfwd=newX
+newXfwd$days=newXfwd$days+eps
+newXbwd=newX
+newXbwd$days=newXbwd$days-eps
+
 newX$cos12=cos(2*pi*newX$days/365.25)
 newX$sin12=sin(2*pi*newX$days/365.25)
 newX$cos6=cos(2*2*pi*newX$days/365.25)
 newX$sin6=sin(2*2*pi*newX$days/365.25)
-coPred=predict(cgam1,newX,se.fit=TRUE)
+
+newXfwd$cos12=cos(2*pi*newXfwd$days/365.25)
+newXfwd$sin12=sin(2*pi*newXfwd$days/365.25)
+newXfwd$cos6=cos(2*2*pi*newXfwd$days/365.25)
+newXfwd$sin6=sin(2*2*pi*newXfwd$days/365.25)
+
+newXbwd$cos12=cos(2*pi*newXbwd$days/365.25)
+newXbwd$sin12=sin(2*pi*newXbwd$days/365.25)
+newXbwd$cos6=cos(2*2*pi*newXbwd$days/365.25)
+newXbwd$sin6=sin(2*2*pi*newXbwd$days/365.25)
+
+pred1=predict(cgam1,newXbwd[ind,],type='lpmatrix')
+pred2=predict(cgam1,newX[ind,],type='lpmatrix')
+pred3=predict(cgam1,newXfwd[ind,],type='lpmatrix')
+
+fd21=(pred2-pred1)/eps
+fd21=fd21%*%coef(cgam1)
+sdiff=(pred3+pred1-2*pred2)/(eps^2)
+sdiff=sdiff%*%coef(cgam1)
+
+dev.new()
+par(mfrow=c(3,1))
+plot(newX$date[ind],predict(cgam1,newX[ind,]),type='l')
+plot(newX$date[ind],fd21,main='Approximation of First Derivative',
+xlab='Year',ylab='First Difference',type='l')
+lines(newX$date,rep(0,dim(newX)[1]),col='red',lwd='2')
+plot(newX$date[ind],sdiff,main='Approximation of Second Derivative',
+xlab='Year',ylab='Second Difference',type='l')
+lines(newX$date,rep(0,dim(newX)[1]),col='red',lwd='2')
+
+# Derivatives: 1995-2015
+
+newX=data.frame(date=seq(ISOdate(1995,1,1,0,0,0,tz ="UTC"),by="1 days",length.out=365*20))
+newX$days=as.numeric(difftime(newX$date, timeOrigin,units="days"))
+newXfwd=newX
+newXfwd$days=newXfwd$days+eps
+newXbwd=newX
+newXbwd$days=newXbwd$days-eps
+
+newX$cos12=cos(2*pi*newX$days/365.25)
+newX$sin12=sin(2*pi*newX$days/365.25)
+newX$cos6=cos(2*2*pi*newX$days/365.25)
+newX$sin6=sin(2*2*pi*newX$days/365.25)
+
+newXfwd$cos12=cos(2*pi*newXfwd$days/365.25)
+newXfwd$sin12=sin(2*pi*newXfwd$days/365.25)
+newXfwd$cos6=cos(2*2*pi*newXfwd$days/365.25)
+newXfwd$sin6=sin(2*2*pi*newXfwd$days/365.25)
+
+newXbwd$cos12=cos(2*pi*newXbwd$days/365.25)
+newXbwd$sin12=sin(2*pi*newXbwd$days/365.25)
+newXbwd$cos6=cos(2*2*pi*newXbwd$days/365.25)
+newXbwd$sin6=sin(2*2*pi*newXbwd$days/365.25)
+
+pred1=predict(cgam1,newXbwd[ind,],type='lpmatrix')
+pred2=predict(cgam1,newX[ind,],type='lpmatrix')
+pred3=predict(cgam1,newXfwd[ind,],type='lpmatrix')
+
+fd21=(pred2-pred1)/eps
+fd21=fd21%*%coef(cgam1)
+sdiff=(pred3+pred1-2*pred2)/(eps^2)
+sdiff=sdiff%*%coef(cgam1)
+
+dev.new()
+par(mfrow=c(3,1))
+plot(newX$date[ind],predict(cgam1,newX[ind,]),type='l')
+plot(newX$date[ind],fd21,main='Approximation of First Derivative',
+xlab='Year',ylab='First Difference',type='l')
+lines(newX$date,rep(0,dim(newX)[1]),col='red',lwd='2')
+plot(newX$date[ind],sdiff,main='Approximation of Second Derivative',
+xlab='Year',ylab='Second Difference',type='l')
+lines(newX$date,rep(0,dim(newX)[1]),col='red',lwd='2')
+
+# Forecasting to 2020
+
+newXpred=data.frame(date=seq(ISOdate(1990,1,1,0,0,0,tz ="UTC"),by="1 days",length.out=365*30))
+newXpred$days=as.numeric(difftime(newXpred$date, timeOrigin,units="days"))
+newXpred$cos12=cos(2*pi*newXpred$days/365.25)
+newXpred$sin12=sin(2*pi*newXpred$days/365.25)
+newXpred$cos6=cos(2*2*pi*newXpred$days/365.25)
+newXpred$sin6=sin(2*2*pi*newXpred$days/365.25)
+coPred=predict(cgam1,newXpred,se.fit=TRUE)
 coPred=data.frame(est=coPred$fit,lower=coPred$fit-2*coPred$se.fit,upper=coPred$fit+2*coPred$se.fit)
 dev.new()
-plot(newX$date, coPred$est,type="l")
-matlines(as.numeric(newX$date), coPred[,c("lower","upper","est")],lty =1,col=c("yellow","yellow","black"))
-newX=newX[1:365, ]
-newX$days=0
+plot(newXpred$date, coPred$est,type="l")
+matlines(as.numeric(newXpred$date), coPred[,c("lower","upper","est")],lty =1,col=c("yellow","yellow","black"))
+
+# Annual Trend
+
+newXannual=newXpred[1:365, ]
+#newXannual$days=0
 dev.new()
-plot(newX$date,predict(cgam1, newX))
+plot(newXannual$date,predict(cgam1, newXannual))
+
+newXannual=newXpred[(14*365+1):(15*365), ]
+#newXannual$days=0
+dev.new()
+plot(newXannual$date,predict(cgam1, newXannual))
 
 # Math: Redux
 
 data("MathAchieve", package="MEMSS")
+MathAchieveNew=MathAchieve
+MathAchieveNew$MathAch=(MathAchieveNew$MathAch+3)/30
 mathINLA=inla(MathAch~Minority+Sex+MEANSES+SES+
 f(School,model='iid'),
-data=MathAchieveNew,family='beta',verbose=TRUE)
+data=MathAchieveNew,family='beta')
 
 ,model='iid',hyper=list(prec=list(prior='pc.prec'))
 

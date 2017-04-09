@@ -1,0 +1,181 @@
+---
+title: "Assignment 3"
+author: "Daniel Glen Cox"
+date: "10 April 2017"
+output: 
+  pdf_document:
+    fig_caption: true
+font_size: 12pt
+---
+
+```{r echo=FALSE,message=FALSE,include=FALSE}
+library(mgcv)
+library(INLA)
+library(Pmisc)
+INLA:::inla.dynload.workaround()
+
+# Non-parametrics
+cUrl=paste("http://scrippsco2.ucsd.edu/sites/default/files","/data/flask_co2_and_isotopic/daily_co2/fldav_spo.csv",sep="")
+cFile=basename(cUrl)
+if(!file.exists(cFile))download.file(cUrl, cFile)
+co2s=read.table(cFile,header=FALSE,sep=",",skip=69,stringsAsFactors=FALSE)
+co2s[co2s[,6]>0,7]=NA
+co2s=data.frame(date=strptime(co2s[,1],format="%Y-%m-%d",tz="UTC"),co2=co2s[,7])
+timeOrigin=ISOdate(1980,1,1,0,0,0,tz="UTC")
+co2s$days=as.numeric(difftime(co2s$date,timeOrigin,units="days"))
+co2s$cos12=cos(2*pi*co2s$days/365.25)
+co2s$sin12=sin(2*pi*co2s$days/365.25)
+co2s$cos6=cos(2*2*pi*co2s$days/365.25)
+co2s$sin6=sin(2*2*pi*co2s$days/365.25)
+
+# the models
+
+cgam1=gam(co2~s(days) + cos12 + sin12 + cos6 + sin6,data=co2s)
+
+# predictions
+
+eps=1
+newX=co2s
+newXfwd=newX+eps
+newXbwd=newX-eps
+pred1=predict(cgam1,newXbwd,type='lpmatrix')
+pred2=predict(cgam1,newX,type='lpmatrix')
+pred3=predict(cgam1,newXfwd,type='lpmatrix')
+
+fd21=(pred2-pred1)/eps
+fd21=fd21%*%coef(cgam1)
+sdiff=(pred3+pred1-2*pred2)/(eps^2)
+sdiff=sdiff%*%coef(cgam1)
+
+#og code
+newXpred=data.frame(date=seq(ISOdate(1990,1,1,0,0,0,tz ="UTC"),by="1 days",length.out=365*30))
+newXpred$days=as.numeric(difftime(newXpred$date, timeOrigin,units="days"))
+newXpred$cos12=cos(2*pi*newXpred$days/365.25)
+newXpred$sin12=sin(2*pi*newXpred$days/365.25)
+newXpred$cos6=cos(2*2*pi*newXpred$days/365.25)
+newXpred$sin6=sin(2*2*pi*newXpred$days/365.25)
+coPred=predict(cgam1,newXpred,se.fit=TRUE)
+coPred=data.frame(est=coPred$fit,lower=coPred$fit-2*coPred$se.fit,upper=coPred$fit+2*coPred$se.fit)
+newXannual=newXpred[1:365, ]
+newXannual$days=0
+```
+
+# Non-parametrics
+
+## Introduction
+
+Carbon dioxide has long been known to be a greenhouse gas, 
+trapping heat within the atmosphere. More contentious, however, 
+is the assertion that carbon dioxide concentrations in the 
+atmosphere are increasing as a result of human actions. In an 
+effort to explore this issue in detail, this study sought to 
+answer the following questions regarding carbon dioxide levels 
+in Antarctica:
+
+* Even though carbon dioxide levels are still increasing, has 
+the increase slowed somewhat recently?
+
+* Did global economic recessions around 1980-1982 and 1990 
+cause a slowing in the increase of carbon dioxide levels?
+
+* Are carbon levels higher in October than in March?
+
+* Are carbon dioxide levels likely to exceed 400 parts per 
+gallon by 2020?
+
+To explore these hypotheses, this study made use of data from 
+the Scripps CO2 Program, generously provided to the public by 
+the Scripps Institute of Oceanography at the University of 
+California in San Diego.
+
+## Methods
+
+This study employed a generalized additive model, defined as follows:
+$$
+\begin{aligned}
+Y_{i} &\sim N(\mu_{i}, \tau^{2}) \\
+\mu_{i} &= X_{i}\beta + f(W_{i})
+\end{aligned}
+$$
+Here $W_{i}$ is a covariate for days, which have been turned into a day count 
+from the original date variable, and $f$ is a smooth function of $W_{i}$. 
+The covariates $X_{i}$ consist of variables which effectively model annual and 
+bi-annual cycles.
+
+The data itself in its original form consists of dates with corresponding 
+carbon dioxide measurements. The data set was then appended with a countdown 
+of days to present time and columns containing the results of sine and 
+cosine functions with annual and bi-annual cycles evaluated on the day counts.
+
+## Results
+
+The results for the model fit itself can be found below in table 1.
+
+```{r echo=FALSE}
+knitr::kable(summary(cgam1)$p.table,digits=3,
+             caption='Generalized additive model of carbon concentration')
+```
+
+```{r echo=FALSE}
+# Plot of prediction to 2020
+plot(newXpred$date, coPred$est,type="l",main="Prediction of Concentration to 2020",
+     xlab="Year",ylab="Concentration")
+matlines(as.numeric(newXpred$date), coPred[,c("lower","upper","est")],lty =1,col=c("yellow","yellow","black"))
+```
+
+```{r echo=FALSE}
+# Plot of annual trend
+plot(newXannual$date,predict(cgam1, newXannual),main="Annual Trend",
+     xlab="Months",ylab="Concentration")
+```
+
+```{r echo=FALSE}
+plot(newX$date,fd21,main='Approximation of First Derivative',
+xlab='Year',ylab='First Difference')
+```
+
+```{r echo=FALSE}
+plot(newX$date,sdiff,main='Approximation of Second Derivative',
+xlab='Year',ylab='Second Difference')
+lines(newX$date,rep(0,dim(newX)[1]),col='red',lwd='2')
+```
+
+## Discussion
+
+
+
+# Moss in Galicia: Redux
+
+
+
+# Application
+
+## Introduction
+
+The use of tobacco products is both a major health concern, as well as 
+a social one. One of the more complex aspects of tobacco consumption 
+that many researchers seek to understand how an individual acquires a 
+tobacco habit in the first place. To help explore one of the many 
+facets to that issue, this study sought to examine the age at which 
+children first try smoking cigarettes, and how that age might vary 
+amongst different regions and other demographics. In particular, this 
+study posed the following questions:
+
+To this end, this study made use of the 2014 American National Youth 
+Tobacco Survey. Details regarding this dataset are given in the methods 
+section.
+
+## Methods
+
+The data used to carry out this study comes from the 2014 American National 
+Youth Tobacco Survey. It was carried out with children in grades 6 to 12 and 
+comprises 81 questions on tobacco-related beliefs, attitudes, and behaviours, 
+as well as questions on exposure to pro- and anti-tobacco influences. The 
+survey had 22,007 respondents.
+
+## Results
+
+
+
+## Discussion
+
